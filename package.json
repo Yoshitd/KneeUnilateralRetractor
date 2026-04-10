@@ -1,0 +1,21 @@
+{
+  "name": "knee-unilateral-retractor",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Server + web UI for the Knee Unilateral Retractor rehab brace.",
+  "main": "server.js",
+  "scripts": {
+    "server": "node server.js",
+    "web": "cd web && npm run dev",
+    "dev": "concurrently -n server,web -c blue,magenta \"npm:server\" \"npm:web\"",
+    "install:all": "npm install && cd web && npm install"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "serialport": "^12.0.0"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.1"
+  }
+}

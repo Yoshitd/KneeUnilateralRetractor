@@ -1,0 +1,26 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-feature-settings: "cv11", "ss01", "ss03";
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+/* Soft animated background for the hero. */
+.hero-glow {
+  background:
+    radial-gradient(800px circle at 15% 10%, hsl(var(--p) / 0.18), transparent 55%),
+    radial-gradient(700px circle at 85% 20%, hsl(var(--s) / 0.18), transparent 55%),
+    radial-gradient(900px circle at 50% 100%, hsl(var(--a) / 0.12), transparent 55%);
+}
+
+@keyframes pulseDot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.55; transform: scale(0.9); }
+}
+.status-dot {
+  animation: pulseDot 1.8s ease-in-out infinite;
+}
