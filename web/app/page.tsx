@@ -7,38 +7,43 @@ type Stage = {
   id: number;
   title: string;
   rom: string;
+  maxAngle: number;
   desc: string;
-  accent: string; // DaisyUI color class for the progress bar
+  color: string;
 };
 
 const STAGES: Stage[] = [
   {
     id: 0,
     title: "Immobilization",
-    rom: "0° – 30°",
-    desc: "Protect the repair and strictly limit flexion.",
-    accent: "progress-error",
+    rom: "0 – 30°",
+    maxAngle: 30,
+    desc: "Protect the repair. Strictly limit flexion to prevent stress on healing tissue.",
+    color: "rgb(255, 59, 48)",
   },
   {
     id: 1,
     title: "Early Motion",
-    rom: "0° – 60°",
-    desc: "Begin gradual, controlled flexion.",
-    accent: "progress-warning",
+    rom: "0 – 60°",
+    maxAngle: 60,
+    desc: "Begin gradual, controlled flexion. Monitor comfort and swelling response.",
+    color: "rgb(255, 149, 0)",
   },
   {
     id: 2,
-    title: "Mid-phase Recovery",
-    rom: "0° – 90°",
-    desc: "Increase tolerance and range.",
-    accent: "progress-info",
+    title: "Mid Recovery",
+    rom: "0 – 90°",
+    maxAngle: 90,
+    desc: "Increase tolerance and range. Progressive loading as tissue adapts.",
+    color: "rgb(0, 122, 255)",
   },
   {
     id: 3,
-    title: "Full Range of Motion",
-    rom: "0° – 120°+",
-    desc: "Work toward patient-specific targets.",
-    accent: "progress-success",
+    title: "Full ROM",
+    rom: "0 – 120°+",
+    maxAngle: 120,
+    desc: "Work toward patient-specific targets. Prepare for return to activity.",
+    color: "rgb(52, 199, 89)",
   },
 ];
 
@@ -59,7 +64,7 @@ export default function HomePage() {
         connected: false,
         port: null,
         stage: null,
-        error: "Cannot reach server.js on :3001",
+        error: "Cannot reach server on :3001",
       });
     }
   }, []);
@@ -77,7 +82,7 @@ export default function HomePage() {
     setToasts((t) => [...t, { kind, message, id }]);
     window.setTimeout(() => {
       setToasts((t) => t.filter((toast) => toast.id !== id));
-    }, 3500);
+    }, 3000);
   };
 
   const handleSelect = async (stage: number) => {
@@ -85,11 +90,11 @@ export default function HomePage() {
     setPendingStage(stage);
     try {
       await setMode(stage);
-      pushToast("success", `Stage ${stage} sent to Arduino`);
+      pushToast("success", `Stage ${stage} activated`);
       await refreshStatus();
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unknown error";
-      pushToast("error", `Failed to set stage: ${message}`);
+      pushToast("error", message);
     } finally {
       setPendingStage(null);
     }
@@ -97,226 +102,347 @@ export default function HomePage() {
 
   const connected = !!status?.connected;
   const activeStage = status?.stage ?? null;
+  const activeData = activeStage !== null ? STAGES[activeStage] : null;
 
   return (
-    <main className="min-h-screen">
-      {/* Navbar */}
-      <div className="navbar bg-base-200/60 backdrop-blur border-b border-base-300 px-6">
-        <div className="flex-1">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-secondary grid place-items-center shadow-lg">
+    <div className="flex flex-col md:flex-row">
+      {/* ── Sidebar ── */}
+      <aside className="sidebar">
+        {/* Brand */}
+        <div className="px-6 pt-8 pb-6">
+          <div className="flex items-center gap-3 mb-1">
+            <div
+              className="w-8 h-8 rounded-lg flex items-center justify-center"
+              style={{ background: "rgb(var(--accent) / 0.1)" }}
+            >
               <svg
-                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
                 viewBox="0 0 24 24"
                 fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
+                stroke="rgb(0,122,255)"
+                strokeWidth="2.5"
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                className="w-5 h-5 text-primary-content"
               >
                 <path d="M6 2v6a6 6 0 0 0 12 0V2" />
                 <path d="M6 22v-6a6 6 0 0 1 12 0v6" />
               </svg>
             </div>
-            <div>
-              <h1 className="text-lg font-bold leading-tight">
-                Knee Rehab Controller
-              </h1>
-              <p className="text-xs opacity-70 leading-tight">
-                Unilateral Retractor · Clinician Panel
-              </p>
-            </div>
-          </div>
-        </div>
-        <div className="flex-none">
-          <StatusPill status={status} />
-        </div>
-      </div>
-
-      {/* Hero */}
-      <section className="hero-glow">
-        <div className="max-w-6xl mx-auto px-6 py-14 md:py-20">
-          <div className="badge badge-outline badge-lg mb-5 gap-2">
-            <span className="w-2 h-2 rounded-full bg-primary status-dot" />
-            Phase-based rehabilitation
-          </div>
-          <h2 className="text-4xl md:text-5xl font-black tracking-tight leading-tight">
-            Guide recovery,
-            <br />
-            <span className="bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
-              one safe stage at a time.
+            <span className="text-[15px] font-semibold tracking-tight">
+              KneeUnilateralRetractor
             </span>
-          </h2>
-          <p className="mt-5 max-w-2xl text-base md:text-lg opacity-75">
-            Select a rehabilitation stage to update the brace&apos;s range of
-            motion limits. Changes are sent to the Arduino over serial the
-            moment you click.
-          </p>
+          </div>
         </div>
-      </section>
 
-      {/* Stage cards */}
-      <section className="max-w-6xl mx-auto px-6 pb-16">
-        <div className="flex items-baseline justify-between mb-6">
-          <h3 className="text-xl font-bold">Rehabilitation Stages</h3>
-          <span className="text-sm opacity-60">
-            {activeStage !== null
-              ? `Currently active: Stage ${activeStage}`
-              : "No stage sent yet"}
+        {/* Connection status */}
+        <div className="px-6 mb-6">
+          <ConnectionStatus status={status} />
+        </div>
+
+        {/* Divider */}
+        <div className="mx-6 border-t border-black/[0.06]" />
+
+        {/* Stage label */}
+        <div className="px-6 pt-5 pb-2">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-black/40">
+            Stages
           </span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+        {/* Stage list */}
+        <nav className="flex-1 px-4 pb-4 overflow-y-auto">
           {STAGES.map((stage) => {
             const isActive = activeStage === stage.id;
             const isPending = pendingStage === stage.id;
+
             return (
-              <article
+              <button
                 key={stage.id}
-                className={`card bg-base-200 shadow-xl transition-all duration-200 hover:-translate-y-1 hover:shadow-2xl ${
-                  isActive
-                    ? "ring-2 ring-success ring-offset-2 ring-offset-base-100"
-                    : ""
-                }`}
+                onClick={() => handleSelect(stage.id)}
+                disabled={!connected || pendingStage !== null}
+                className={`stage-item w-full text-left mb-1 ${
+                  isActive ? "active" : ""
+                } ${!connected ? "disabled" : ""}`}
               >
-                <div className="card-body gap-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="text-5xl font-black opacity-20 leading-none select-none">
-                        {stage.id}
-                      </div>
-                      <div>
-                        <p className="text-xs uppercase tracking-widest opacity-60">
-                          Stage {stage.id}
-                        </p>
-                        <h4 className="card-title text-lg leading-tight">
-                          {stage.title}
-                        </h4>
-                      </div>
-                    </div>
-                    {isActive && (
-                      <span className="badge badge-success badge-sm gap-1 font-semibold">
-                        <span className="w-1.5 h-1.5 rounded-full bg-success-content" />
-                        Active
+                <div className="flex items-center gap-3">
+                  <div
+                    className="w-2.5 h-2.5 rounded-full shrink-0"
+                    style={{
+                      background: isActive ? stage.color : "rgba(0,0,0,0.12)",
+                    }}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="stage-title text-[14px] font-medium leading-tight">
+                        {stage.title}
                       </span>
-                    )}
-                  </div>
-
-                  <div>
-                    <div className="flex items-center justify-between text-sm mb-1.5">
-                      <span className="font-semibold">Range of Motion</span>
-                      <span className="font-mono opacity-80">{stage.rom}</span>
+                      {isPending && <span className="spinner" />}
                     </div>
-                    <progress
-                      className={`progress ${stage.accent} w-full`}
-                      value={(stage.id + 1) * 25}
-                      max={100}
-                    />
+                    <span className="text-[12px] text-black/40 leading-tight">
+                      {stage.rom}
+                    </span>
                   </div>
-
-                  <p className="text-sm opacity-75 leading-relaxed">
-                    {stage.desc}
-                  </p>
-
-                  <div className="card-actions mt-1">
-                    <button
-                      className={`btn w-full ${
-                        isActive ? "btn-success" : "btn-primary"
-                      }`}
-                      disabled={!connected || pendingStage !== null}
-                      onClick={() => handleSelect(stage.id)}
+                  {isActive && (
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="rgb(0,122,255)"
+                      strokeWidth="3"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
                     >
-                      {isPending ? (
-                        <>
-                          <span className="loading loading-spinner loading-sm" />
-                          Sending…
-                        </>
-                      ) : isActive ? (
-                        "Currently Active"
-                      ) : (
-                        "Select Stage"
-                      )}
-                    </button>
-                  </div>
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  )}
                 </div>
-              </article>
+              </button>
             );
           })}
-        </div>
+        </nav>
 
-        {/* Disconnected notice */}
-        {!connected && (
-          <div className="alert alert-warning mt-8 shadow">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="stroke-current shrink-0 h-6 w-6"
-              fill="none"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-              />
-            </svg>
-            <div>
-              <h4 className="font-bold">Arduino not connected</h4>
-              <p className="text-sm opacity-80">
-                {status?.error ??
-                  "Plug in the rehab brace and the stage selection will become available."}
-              </p>
+        {/* Footer */}
+        <div className="px-6 py-4 border-t border-black/[0.06]">
+          <p className="text-[11px] text-black/30 leading-relaxed">
+            Validate transitions against the clinician&apos;s prescription.
+          </p>
+        </div>
+      </aside>
+
+      {/* ── Main content ── */}
+      <main className="main-content">
+        <div className="max-w-2xl mx-auto px-8 md:px-16 py-12 md:py-20">
+          {/* Header */}
+          <div className="animate-fade-up">
+            <h1 className="text-[32px] md:text-[40px] font-semibold tracking-tight leading-[1.1] text-black/90">
+              Recovery Control
+            </h1>
+            <p className="mt-3 text-[16px] text-black/45 leading-relaxed max-w-md">
+              Select a stage to update the brace&apos;s range of motion.
+              Changes are sent instantly over serial.
+            </p>
+          </div>
+
+          {/* Active stage detail card */}
+          <div
+            className="mt-12 animate-fade-up"
+            style={{ animationDelay: "0.1s" }}
+          >
+            {activeData ? (
+              <ActiveStageCard stage={activeData} />
+            ) : (
+              <EmptyState connected={connected} error={status?.error} />
+            )}
+          </div>
+
+          {/* All stages overview */}
+          <div
+            className="mt-14 animate-fade-up"
+            style={{ animationDelay: "0.2s" }}
+          >
+            <h2 className="text-[13px] font-semibold uppercase tracking-[0.06em] text-black/35 mb-5">
+              All Stages
+            </h2>
+            <div className="space-y-3">
+              {STAGES.map((stage) => (
+                <StageRow
+                  key={stage.id}
+                  stage={stage}
+                  isActive={activeStage === stage.id}
+                />
+              ))}
             </div>
           </div>
-        )}
-      </section>
+        </div>
+      </main>
 
-      {/* Footer */}
-      <footer className="max-w-6xl mx-auto px-6 pb-10 text-xs opacity-50">
-        Always validate stage transitions against the treating clinician&apos;s
-        prescription before use.
-      </footer>
-
-      {/* Toasts */}
-      <div className="toast toast-end z-50">
+      {/* ── Toasts ── */}
+      <div className="toast-container">
         {toasts.map((t) => (
-          <div
-            key={t.id}
-            className={`alert ${
-              t.kind === "success" ? "alert-success" : "alert-error"
-            } shadow-lg`}
-          >
-            <span>{t.message}</span>
+          <div key={t.id} className={`toast-item ${t.kind}`}>
+            {t.message}
           </div>
         ))}
       </div>
-    </main>
+    </div>
   );
 }
 
-function StatusPill({ status }: { status: Status | null }) {
+/* ── Sub-components ── */
+
+function ConnectionStatus({ status }: { status: Status | null }) {
   if (!status) {
     return (
-      <span className="badge badge-ghost gap-2">
-        <span className="w-2 h-2 rounded-full bg-base-content/40" />
-        Loading…
-      </span>
+      <div className="flex items-center gap-2.5">
+        <div className="w-2 h-2 rounded-full bg-black/15" />
+        <span className="text-[13px] text-black/40">Connecting...</span>
+      </div>
     );
   }
+
   if (status.connected) {
     return (
-      <span className="badge badge-success gap-2 py-3">
-        <span className="w-2 h-2 rounded-full bg-success-content status-dot" />
-        <span className="font-semibold">Connected</span>
-        <span className="opacity-80 font-mono text-xs">{status.port}</span>
-      </span>
+      <div className="flex items-center gap-2.5">
+        <div
+          className="w-2 h-2 rounded-full status-pulse"
+          style={{ background: "rgb(52, 199, 89)" }}
+        />
+        <span className="text-[13px] text-black/60 font-medium">
+          Connected
+        </span>
+        <span className="text-[12px] text-black/30 font-mono">
+          {status.port}
+        </span>
+      </div>
     );
   }
+
   return (
-    <span className="badge badge-error gap-2 py-3">
-      <span className="w-2 h-2 rounded-full bg-error-content" />
-      <span className="font-semibold">Disconnected</span>
-    </span>
+    <div className="flex items-center gap-2.5">
+      <div
+        className="w-2 h-2 rounded-full"
+        style={{ background: "rgb(255, 59, 48)" }}
+      />
+      <span className="text-[13px] text-black/50 font-medium">
+        Disconnected
+      </span>
+    </div>
+  );
+}
+
+function ActiveStageCard({ stage }: { stage: Stage }) {
+  const pct = Math.round((stage.maxAngle / 120) * 100);
+
+  return (
+    <div
+      className="rounded-2xl p-8 md:p-10"
+      style={{
+        background: "#fff",
+        boxShadow: "0 1px 3px rgba(0,0,0,0.04), 0 0 0 1px rgba(0,0,0,0.03)",
+      }}
+    >
+      <div className="flex items-start justify-between mb-6">
+        <div>
+          <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-black/35 mb-1">
+            Active Stage
+          </p>
+          <h3 className="text-[26px] font-semibold tracking-tight leading-tight">
+            {stage.title}
+          </h3>
+        </div>
+        <div
+          className="text-[36px] font-semibold tracking-tight"
+          style={{ color: stage.color }}
+        >
+          {stage.rom.split("–")[1]?.trim() ?? stage.rom}
+        </div>
+      </div>
+
+      <p className="text-[15px] text-black/50 leading-relaxed mb-8">
+        {stage.desc}
+      </p>
+
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-[12px] font-medium text-black/40">
+            Range of Motion
+          </span>
+          <span className="text-[12px] font-mono text-black/35">{stage.rom}</span>
+        </div>
+        <div className="rom-bar">
+          <div
+            className="rom-bar-fill"
+            style={{ width: `${pct}%`, background: stage.color }}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EmptyState({
+  connected,
+  error,
+}: {
+  connected: boolean;
+  error: string | null | undefined;
+}) {
+  return (
+    <div
+      className="rounded-2xl p-8 md:p-10 text-center"
+      style={{
+        background: "#fff",
+        boxShadow: "0 1px 3px rgba(0,0,0,0.04), 0 0 0 1px rgba(0,0,0,0.03)",
+      }}
+    >
+      <div className="w-12 h-12 rounded-full mx-auto mb-4 flex items-center justify-center bg-black/[0.03]">
+        <svg
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="rgba(0,0,0,0.25)"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M6 2v6a6 6 0 0 0 12 0V2" />
+          <path d="M6 22v-6a6 6 0 0 1 12 0v6" />
+        </svg>
+      </div>
+      <h3 className="text-[17px] font-semibold text-black/70 mb-1">
+        {connected ? "No stage selected" : "Device not connected"}
+      </h3>
+      <p className="text-[14px] text-black/35 max-w-xs mx-auto">
+        {connected
+          ? "Select a rehabilitation stage from the sidebar to begin."
+          : error ?? "Connect the brace to get started."}
+      </p>
+    </div>
+  );
+}
+
+function StageRow({
+  stage,
+  isActive,
+}: {
+  stage: Stage;
+  isActive: boolean;
+}) {
+  const pct = Math.round((stage.maxAngle / 120) * 100);
+
+  return (
+    <div
+      className="flex items-center gap-4 px-5 py-4 rounded-xl transition-colors"
+      style={{
+        background: isActive ? "rgb(var(--accent) / 0.04)" : "transparent",
+      }}
+    >
+      <div
+        className="w-2 h-2 rounded-full shrink-0"
+        style={{ background: isActive ? stage.color : "rgba(0,0,0,0.1)" }}
+      />
+      <div className="flex-1 min-w-0">
+        <span
+          className="text-[14px] font-medium"
+          style={{ color: isActive ? "rgb(0,122,255)" : "rgba(0,0,0,0.7)" }}
+        >
+          {stage.title}
+        </span>
+      </div>
+      <div className="w-24 shrink-0">
+        <div className="rom-bar">
+          <div
+            className="rom-bar-fill"
+            style={{ width: `${pct}%`, background: stage.color, opacity: isActive ? 1 : 0.35 }}
+          />
+        </div>
+      </div>
+      <span className="text-[12px] font-mono text-black/35 w-16 text-right shrink-0">
+        {stage.rom}
+      </span>
+    </div>
   );
 }

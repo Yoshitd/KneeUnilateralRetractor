@@ -1,26 +1,193 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --sidebar-w: 300px;
+    --accent: 0 122 255;       /* Apple blue */
+    --accent-soft: 0 122 255;
+    --green: 52 199 89;        /* Apple green */
+    --red: 255 59 48;          /* Apple red */
+    --orange: 255 149 0;       /* Apple orange */
+  }
+
   html {
-    font-feature-settings: "cv11", "ss01", "ss03";
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', system-ui, sans-serif;
+    background: #fafafa;
+    color: #1d1d1f;
+  }
+
+  ::selection {
+    background: rgb(var(--accent) / 0.15);
   }
 }
 
-/* Soft animated background for the hero. */
-.hero-glow {
-  background:
-    radial-gradient(800px circle at 15% 10%, hsl(var(--p) / 0.18), transparent 55%),
-    radial-gradient(700px circle at 85% 20%, hsl(var(--s) / 0.18), transparent 55%),
-    radial-gradient(900px circle at 50% 100%, hsl(var(--a) / 0.12), transparent 55%);
+/* Sidebar */
+.sidebar {
+  width: var(--sidebar-w);
+  height: 100vh;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border-right: 1px solid rgba(0, 0, 0, 0.06);
 }
 
-@keyframes pulseDot {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50%      { opacity: 0.55; transform: scale(0.9); }
+.main-content {
+  margin-left: var(--sidebar-w);
+  min-height: 100vh;
 }
-.status-dot {
-  animation: pulseDot 1.8s ease-in-out infinite;
+
+/* Stage item in sidebar */
+.stage-item {
+  position: relative;
+  padding: 14px 20px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.stage-item:hover {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.stage-item:active {
+  transform: scale(0.98);
+}
+
+.stage-item.active {
+  background: rgb(var(--accent) / 0.07);
+}
+
+.stage-item.active .stage-title {
+  color: rgb(var(--accent));
+}
+
+.stage-item.disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+/* Status dot pulse */
+@keyframes pulse-ring {
+  0% { transform: scale(1); opacity: 1; }
+  70% { transform: scale(2.2); opacity: 0; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+
+.status-pulse {
+  position: relative;
+}
+
+.status-pulse::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: inherit;
+  animation: pulse-ring 2s ease-out infinite;
+}
+
+/* Toast */
+.toast-container {
+  position: fixed;
+  bottom: 28px;
+  right: 28px;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.toast-item {
+  padding: 12px 20px;
+  border-radius: 14px;
+  font-size: 14px;
+  font-weight: 500;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+  animation: toast-in 0.35s ease-out;
+}
+
+.toast-item.success {
+  background: rgb(var(--green) / 0.12);
+  color: rgb(34, 140, 60);
+  border: 1px solid rgb(var(--green) / 0.15);
+}
+
+.toast-item.error {
+  background: rgb(var(--red) / 0.12);
+  color: rgb(200, 40, 35);
+  border: 1px solid rgb(var(--red) / 0.15);
+}
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(12px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Fade in for main content */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-up {
+  animation: fade-up 0.5s ease-out both;
+}
+
+/* Sending spinner */
+@keyframes spin-smooth {
+  to { transform: rotate(360deg); }
+}
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgb(var(--accent) / 0.2);
+  border-top-color: rgb(var(--accent));
+  border-radius: 50%;
+  animation: spin-smooth 0.7s linear infinite;
+}
+
+/* Progress bar */
+.rom-bar {
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+}
+
+.rom-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Responsive: collapse sidebar on small screens */
+@media (max-width: 768px) {
+  .sidebar {
+    width: 100%;
+    height: auto;
+    position: relative;
+    border-right: none;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  }
+
+  .main-content {
+    margin-left: 0;
+  }
 }
