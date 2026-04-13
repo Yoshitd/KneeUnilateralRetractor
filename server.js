@@ -6,7 +6,9 @@
 //   • Reconnect automatically when the board is unplugged and plugged back in.
 //   • Expose a tiny REST API for the Next.js frontend to switch rehab stages.
 //
-// Wire protocol to the Arduino: the ASCII digit '0'..'3' followed by '\n'.
+// Wire protocol to the Arduino: the ASCII digit '0'..'4' followed by '\n'.
+// Stages 0..3 are rehab ROM targets; stage 4 is a "return to zero" command
+// that drives the brace back to its neutral/home position.
 
 const express = require("express");
 const cors = require("cors");
@@ -147,10 +149,10 @@ app.get("/api/ports", async (_req, res) => {
 
 app.post("/api/mode", (req, res) => {
   const { stage } = req.body ?? {};
-  if (!Number.isInteger(stage) || stage < 0 || stage > 3) {
+  if (!Number.isInteger(stage) || stage < 0 || stage > 4) {
     return res
       .status(400)
-      .json({ error: "stage must be an integer in [0, 3]" });
+      .json({ error: "stage must be an integer in [0, 4]" });
   }
 
   if (!state.connected || !port) {
@@ -158,6 +160,7 @@ app.post("/api/mode", (req, res) => {
   }
 
   const payload = `${stage}\n`;
+  const isReturnToZero = stage === 4;
   port.write(payload, (writeErr) => {
     if (writeErr) {
       console.error(`[serial] write failed: ${writeErr.message}`);
@@ -168,8 +171,14 @@ app.post("/api/mode", (req, res) => {
         console.error(`[serial] drain failed: ${drainErr.message}`);
         return res.status(500).json({ error: drainErr.message });
       }
-      state.stage = stage;
-      console.log(`[serial] → sent stage ${stage}`);
+      // Return-to-zero is a transient command; don't leave it as the "active"
+      // rehab stage in reported state — clear instead.
+      state.stage = isReturnToZero ? null : stage;
+      console.log(
+        isReturnToZero
+          ? "[serial] → sent return-to-zero command"
+          : `[serial] → sent stage ${stage}`
+      );
       res.json({ ok: true, stage });
     });
   });

@@ -12,6 +12,15 @@ type Stage = {
   color: string;
 };
 
+const RETURN_STAGE: Stage = {
+  id: 4,
+  title: "Return to Zero",
+  rom: "→ 0°",
+  maxAngle: 0,
+  desc: "Drive the brace back to its neutral home position.",
+  color: "rgb(142, 142, 147)",
+};
+
 const STAGES: Stage[] = [
   {
     id: 0,
@@ -51,6 +60,7 @@ type Toast = { kind: "success" | "error"; message: string; id: number };
 
 export default function HomePage() {
   const [status, setStatus] = useState<Status | null>(null);
+  const [selectedStage, setSelectedStage] = useState<number | null>(null);
   const [pendingStage, setPendingStage] = useState<number | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const pollRef = useRef<number | null>(null);
@@ -85,12 +95,21 @@ export default function HomePage() {
     }, 3000);
   };
 
-  const handleSelect = async (stage: number) => {
-    if (!status?.connected || pendingStage !== null) return;
-    setPendingStage(stage);
+  const handleSelect = (stage: number) => {
+    setSelectedStage(stage);
+  };
+
+  const handleApply = async () => {
+    if (selectedStage === null || !status?.connected || pendingStage !== null) return;
+    setPendingStage(selectedStage);
     try {
-      await setMode(stage);
-      pushToast("success", `Stage ${stage} activated`);
+      await setMode(selectedStage);
+      pushToast(
+        "success",
+        selectedStage === RETURN_STAGE.id
+          ? "Returning to zero"
+          : `Stage ${selectedStage} activated`
+      );
       await refreshStatus();
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unknown error";
@@ -102,7 +121,16 @@ export default function HomePage() {
 
   const connected = !!status?.connected;
   const activeStage = status?.stage ?? null;
-  const activeData = activeStage !== null ? STAGES[activeStage] : null;
+  const activeData =
+    activeStage !== null && activeStage >= 0 && activeStage < STAGES.length
+      ? STAGES[activeStage]
+      : null;
+  const selectedLabel =
+    selectedStage === RETURN_STAGE.id
+      ? RETURN_STAGE.title
+      : selectedStage !== null
+      ? `Stage ${selectedStage}`
+      : null;
 
   return (
     <div className="flex flex-col md:flex-row">
@@ -154,22 +182,21 @@ export default function HomePage() {
         <nav className="flex-1 px-4 pb-4 overflow-y-auto">
           {STAGES.map((stage) => {
             const isActive = activeStage === stage.id;
-            const isPending = pendingStage === stage.id;
+            const isSelected = selectedStage === stage.id;
 
             return (
               <button
                 key={stage.id}
                 onClick={() => handleSelect(stage.id)}
-                disabled={!connected || pendingStage !== null}
                 className={`stage-item w-full text-left mb-1 ${
-                  isActive ? "active" : ""
+                  isSelected ? "active" : ""
                 } ${!connected ? "disabled" : ""}`}
               >
                 <div className="flex items-center gap-3">
                   <div
                     className="w-2.5 h-2.5 rounded-full shrink-0"
                     style={{
-                      background: isActive ? stage.color : "rgba(0,0,0,0.12)",
+                      background: isSelected || isActive ? stage.color : "rgba(0,0,0,0.12)",
                     }}
                   />
                   <div className="flex-1 min-w-0">
@@ -177,7 +204,6 @@ export default function HomePage() {
                       <span className="stage-title text-[14px] font-medium leading-tight">
                         {stage.title}
                       </span>
-                      {isPending && <span className="spinner" />}
                     </div>
                     <span className="text-[12px] text-black/40 leading-tight">
                       {stage.rom}
@@ -189,7 +215,7 @@ export default function HomePage() {
                       height="14"
                       viewBox="0 0 24 24"
                       fill="none"
-                      stroke="rgb(0,122,255)"
+                      stroke="rgb(52, 199, 89)"
                       strokeWidth="3"
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -202,6 +228,96 @@ export default function HomePage() {
             );
           })}
         </nav>
+
+        {/* Return-to-zero (sidebar-only) */}
+        <div className="px-4 pb-2">
+          <div className="mx-2 mb-2 border-t border-black/[0.06]" />
+          {(() => {
+            const isSelected = selectedStage === RETURN_STAGE.id;
+            return (
+              <button
+                onClick={() => handleSelect(RETURN_STAGE.id)}
+                className={`stage-item w-full text-left ${
+                  isSelected ? "active" : ""
+                } ${!connected ? "disabled" : ""}`}
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className="w-2.5 h-2.5 rounded-full shrink-0 flex items-center justify-center"
+                    style={{
+                      background: isSelected ? RETURN_STAGE.color : "transparent",
+                      border: isSelected
+                        ? "none"
+                        : "1.5px solid rgba(0,0,0,0.2)",
+                    }}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <span className="stage-title text-[14px] font-medium leading-tight">
+                      {RETURN_STAGE.title}
+                    </span>
+                    <span className="block text-[12px] text-black/40 leading-tight">
+                      {RETURN_STAGE.rom}
+                    </span>
+                  </div>
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="rgba(0,0,0,0.35)"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M3 12a9 9 0 1 0 3-6.7" />
+                    <polyline points="3 4 3 10 9 10" />
+                  </svg>
+                </div>
+              </button>
+            );
+          })()}
+        </div>
+
+        {/* Apply button */}
+        <div className="px-4 pb-4">
+          <button
+            onClick={handleApply}
+            disabled={
+              selectedStage === null ||
+              !connected ||
+              pendingStage !== null ||
+              selectedStage === activeStage
+            }
+            className="w-full py-2.5 rounded-xl text-[14px] font-semibold text-white transition-all"
+            style={{
+              background:
+                selectedStage !== null && connected && pendingStage === null && selectedStage !== activeStage
+                  ? "rgb(0, 122, 255)"
+                  : "rgba(0,0,0,0.1)",
+              cursor:
+                selectedStage !== null && connected && pendingStage === null && selectedStage !== activeStage
+                  ? "pointer"
+                  : "not-allowed",
+              color:
+                selectedStage !== null && connected && pendingStage === null && selectedStage !== activeStage
+                  ? "#fff"
+                  : "rgba(0,0,0,0.3)",
+            }}
+          >
+            {pendingStage !== null ? (
+              <span className="flex items-center justify-center gap-2">
+                <span className="spinner" />{" "}
+                {pendingStage === RETURN_STAGE.id ? "Returning..." : "Applying..."}
+              </span>
+            ) : selectedStage !== null && selectedStage !== activeStage ? (
+              selectedStage === RETURN_STAGE.id
+                ? "Return to Zero"
+                : `Apply ${selectedLabel}`
+            ) : (
+              "Select a stage"
+            )}
+          </button>
+        </div>
 
         {/* Footer */}
         <div className="px-6 py-4 border-t border-black/[0.06]">
@@ -220,8 +336,8 @@ export default function HomePage() {
               Recovery Control
             </h1>
             <p className="mt-3 text-[16px] text-black/45 leading-relaxed max-w-md">
-              Select a stage to update the brace&apos;s range of motion.
-              Changes are sent instantly over serial.
+              Select a stage from the sidebar, then press Apply to
+              update the brace&apos;s range of motion.
             </p>
           </div>
 
